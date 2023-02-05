@@ -1,5 +1,3 @@
-# Employee Registration
-Employee Registration Image Recognition
 
-SDP Team Project
-OH YESAAAAAAAAAAAAAAAA
+# ADA University
+# Employee Registration Image Recognition
