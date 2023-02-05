@@ -3,6 +3,7 @@ import json
 
 import uvicorn
 from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import yolov5s
 from fastapi.middleware.cors import CORSMiddleware
