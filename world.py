@@ -43,5 +43,5 @@ cars_db = [{"car_name": "cadillac"}, {"car_name": "bmw"}, {"car_name": "lada"}, 
 
 
 @hello.get("/cars")
-async def cars(skip: int = 0, limit: int = 23):
+async def cars(skip: int = 0, limit: int = 25):
     return cars_db[skip: skip + limit]
