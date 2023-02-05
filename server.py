@@ -33,3 +33,4 @@ async def get_body(file: bytes = File(...)):
     results = yolov5s.model(input_image)
     results_json = json.loads(results.pandas().xyxy[0].to_json(orient="records"))
     return {"result": results_json}
+
