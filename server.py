@@ -1,6 +1,10 @@
+import io
+import json
+
 import uvicorn
 from fastapi import FastAPI, UploadFile, File
-
+from PIL import Image
+import yolov5s
 from model import predict, read_imagefile
 
 mserver = FastAPI()
@@ -14,3 +18,11 @@ async def predict_api(file: UploadFile = File(...)):
     image = read_imagefile(await file.read())
     prediction = predict(image)
     return prediction
+
+
+@mserver.post("/objectdetection/")
+async def get_body(file: bytes = File(...)):
+    input_image = Image.open(io.BytesIO(file)).convert("RGB")
+    results = yolov5s.model(input_image)
+    results_json = json.loads(results.pandas().xyxy[0].to_json(orient="records"))
+    return {"result": results_json}
