@@ -9,7 +9,6 @@ input_size = (224, 224, 3)
 
 def load_model():
     model = tf.keras.applications.MobileNetV2(weights="imagenet")
-    print("Model loaded")
     return model
 
 
@@ -31,7 +30,6 @@ def preprocess(image: Image.Image):
 def predict(image: Image.Image):
     image = preprocess(image)
     result = decode_predictions(model.predict(image), 4)[0]
-    print(result)
     response = []
     for i, res in enumerate(result):
         resp = {}
