@@ -8,6 +8,7 @@ from sklearn.preprocessing import LabelEncoder
 from faceRecMod import create_model
 import joblib
 
+
 def process_labels(labels):
     label_encoder = LabelEncoder()
     integer_encoded = label_encoder.fit_transform(labels)
@@ -41,6 +42,7 @@ def main():
 
     model.save('face_recognition.h5')
     joblib.dump(label_encoder, "label_encoder.joblib")
+
 
 if __name__ == '__main__':
     main()

@@ -10,12 +10,13 @@ import uvicorn
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
+
+import model_classifier
 import yolov5s
 import joblib
 from faceRecMod import create_model
 
-from model import predict, read_imagefile
-
+from model_classifier import predict, read_imagefile
 
 mserver = FastAPI()
 
@@ -26,13 +27,15 @@ mserver.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 @mserver.post("/predict/image")
 async def predict_api(file: UploadFile = File(...)):
     extension = file.filename.split(".")[-1] in ("jpg", "jpeg", "png")
     if not extension:
         return "Image must be jpg or png format!"
     image = read_imagefile(await file.read())
-    prediction = predict(image)
+    prediction = model_classifier.predict(image)
     return prediction
 
 
@@ -44,11 +47,10 @@ async def get_body(file: bytes = File(...)):
     return {"result": results_json}
 
 
-
 model = tf.keras.models.load_model("face_recognition.h5")
 
-
 label_encoder = joblib.load("label_encoder.joblib")
+
 
 @mserver.post("/predict")
 async def predict(file: UploadFile):
