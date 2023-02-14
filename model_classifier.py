@@ -31,9 +31,9 @@ def preprocess(image: Image.Image):
 def predict(image: Image.Image):
     image = preprocess(image)
     result = decode_predictions(model.predict(image), 4)[0]
-    print(result)
     response = []
     for i, res in enumerate(result):
         resp = {"class": res[1], "confidence": f"{res[2] * 100:0.2f} %"}
         response.append(resp)
+        print(response)
     return response

@@ -13,6 +13,7 @@ def process_labels(labels):
     y = tf.keras.utils.to_categorical(integer_encoded)
     return y, label_encoder
 
+
 def get_data(directory):
     X = []
     y = []
@@ -29,6 +30,7 @@ def get_data(directory):
 
     y, label_encoder = process_labels(labels)
     return np.array(X), y, labels, label_encoder
+
 
 def main():
     X, y, labels, label_encoder = get_data('./Five_Faces')
