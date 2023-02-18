@@ -1,12 +1,12 @@
 import io
 import json
-import torch
-from tensorflow import keras
-import os
+# import torch
+# from tensorflow import keras
+# import os
 import cv2
 import tensorflow as tf
 import numpy as np
-import uvicorn
+# import uvicorn
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
@@ -14,7 +14,7 @@ from PIL import Image
 import model_classifier
 import yolov5s
 import joblib
-from faceRecMod import create_model
+# from faceRecMod import create_model
 
 from model_classifier import predict, read_imagefile
 
@@ -65,3 +65,15 @@ async def predict(file: UploadFile):
     result = np.argmax(result, axis=1)
     result = label_encoder.inverse_transform(result)
     return {"result": result[0]}
+
+
+face_cascade = cv2.CascadeClassifier('cascades/data/haarcascade_frontalface_alt2.xml')
+
+@mserver.post("/detect_faces/")
+async def detect_faces(image: UploadFile = File(...)):
+    contents = await image.read()
+    pil_image = Image.open(io.BytesIO(contents)).convert("L")
+    image_array = np.array(pil_image, "uint8")
+    faces = face_cascade.detectMultiScale(image_array, scaleFactor=1.5, minNeighbors=5)
+    face_coordinates = faces.tolist()
+    return face_coordinates
