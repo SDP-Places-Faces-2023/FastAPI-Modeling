@@ -18,7 +18,6 @@ import joblib
 
 from model_classifier import predict, read_imagefile
 
-
 mserver = FastAPI()
 
 mserver.add_middleware(
@@ -28,6 +27,8 @@ mserver.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 @mserver.post("/predict/image")
 async def predict_api(file: UploadFile = File(...)):
     image = read_imagefile(await file.read())
@@ -43,11 +44,10 @@ async def get_body(file: bytes = File(...)):
     return {"result": results_json}
 
 
-
 model = tf.keras.models.load_model("face_recognition.h5")
 
-
 label_encoder = joblib.load("label_encoder.joblib")
+
 
 @mserver.post("/predict")
 async def predict(file: UploadFile):
@@ -69,11 +69,17 @@ async def predict(file: UploadFile):
 
 face_cascade = cv2.CascadeClassifier('cascades/data/haarcascade_frontalface_alt2.xml')
 
+
 @mserver.post("/detect_faces/")
-async def detect_faces(image: UploadFile = File(...)):
-    contents = await image.read()
+async def detect_faces(file: UploadFile = File(...)):
+    contents = await file.read()
     pil_image = Image.open(io.BytesIO(contents)).convert("L")
     image_array = np.array(pil_image, "uint8")
     faces = face_cascade.detectMultiScale(image_array, scaleFactor=1.5, minNeighbors=5)
-    face_coordinates = faces.tolist()
-    return face_coordinates
+    if len(faces) == 0:
+        print("No Face")
+        return "No Face"
+    else:
+        face_coordinates = faces.tolist()
+        print(face_coordinates)
+        return face_coordinates[0]
