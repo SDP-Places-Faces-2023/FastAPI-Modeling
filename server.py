@@ -17,8 +17,6 @@ mserver.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
 @mserver.post("/predict/image")
 async def predict_api(file: UploadFile = File(...)):
     extension = file.filename.split(".")[-1] in ("jpg", "jpeg", "png")
@@ -35,3 +33,4 @@ async def get_body(file: bytes = File(...)):
     results = yolov5s.model(input_image)
     results_json = json.loads(results.pandas().xyxy[0].to_json(orient="records"))
     return {"result": results_json}
+
