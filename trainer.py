@@ -22,14 +22,14 @@ for root, dirs, files in os.walk(image_dir):
             path = os.path.join(root, file)
             label = os.path.basename(root).replace(" ", "-").lower()
             i = i + 1
-            #print(label, path)
-            #print(label, i, path)
+            print(label, path)
+            print(label, i, path)
 
             if not label in label_ids:
                 label_ids[label] = current_id
                 current_id += 1
             id_ = label_ids[label]
-            #print(label_ids)
+            print(label_ids)
             pil_image = Image.open(path).convert("L")
             # size = (550, 550)
             # final_image = pil_image.resize(size, Image.ANTIALIASING)

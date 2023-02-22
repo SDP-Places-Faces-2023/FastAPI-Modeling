@@ -97,8 +97,6 @@ async def recognize_image(file: UploadFile = File(...)):
     results = []
     for (x, y, w, h) in faces:
         roi_gray = gray[y:y + h, x:x + w]
-        roi_color = img[y:y + h, x:x + w]
-
         id_, conf = recognizer.predict(roi_gray)
         if 45 <= conf <= 99:
             name = labels[id_]
