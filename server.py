@@ -17,6 +17,7 @@ mserver.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 @mserver.post("/predict/image")
 async def predict_api(file: UploadFile = File(...)):
     extension = file.filename.split(".")[-1] in ("jpg", "jpeg", "png")
