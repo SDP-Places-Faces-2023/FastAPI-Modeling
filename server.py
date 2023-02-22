@@ -17,6 +17,7 @@ import joblib
 # from faceRecMod import create_model
 
 from model_classifier import predict, read_imagefile
+from recongize import recognizer, labels
 
 mserver = FastAPI()
 
@@ -83,3 +84,23 @@ async def detect_faces(file: UploadFile = File(...)):
         face_coordinates = faces.tolist()
         print(face_coordinates)
         return face_coordinates[0]
+
+@mserver.post("/recognize_faces/")
+async def recognize_image(file: UploadFile = File(...)):
+    contents = await file.read()
+    nparr = np.fromstring(contents, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.6, minNeighbors=8)
+
+    results = []
+    for (x, y, w, h) in faces:
+        roi_gray = gray[y:y + h, x:x + w]
+        roi_color = img[y:y + h, x:x + w]
+
+        id_, conf = recognizer.predict(roi_gray)
+        if 45 <= conf <= 99:
+            name = labels[id_]
+            results.append({"name": name, "confidence": conf})
+
+    return {"results": results}
