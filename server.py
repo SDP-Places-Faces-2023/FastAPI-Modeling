@@ -46,9 +46,7 @@ async def get_body(file: bytes = File(...)):
 
 
 model = tf.keras.models.load_model("face_recognition.h5")
-
 label_encoder = joblib.load("label_encoder.joblib")
-
 
 @mserver.post("/predict")
 async def predict(file: UploadFile):
@@ -62,10 +60,13 @@ async def predict(file: UploadFile):
     image = tf.expand_dims(image, axis=0)
 
     # Make prediction using the model
-    result = model.predict(image)
-    result = np.argmax(result, axis=1)
-    result = label_encoder.inverse_transform(result)
-    return {"result": result[0]}
+    result = model.predict(image)[0]
+    max_prob_idx = np.argmax(result)
+    max_prob = np.max(result)
+    predicted_label = label_encoder.inverse_transform([max_prob_idx])
+
+    return {"result": predicted_label[0], "confidence": float(max_prob)}
+
 
 
 face_cascade = cv2.CascadeClassifier('cascades/data/haarcascade_frontalface_alt2.xml')
