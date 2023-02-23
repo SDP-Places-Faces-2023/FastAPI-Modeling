@@ -29,23 +29,24 @@ def get_data(directory):
                 labels.append(label)
 
     y, label_encoder = process_labels(labels)
-    return np.array(X), y, labels, label_encoder
+    return np.array(X), y, label_encoder
 
 
 def main():
-    X, y, labels, label_encoder = get_data('./Five_Faces')
+    X, y, label_encoder = get_data('./Five_Faces')
 
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=0)
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=0)
+
     datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-        rotation_range=20,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        horizontal_flip=True,
-        zoom_range=0.2
+        rotation_range=10,
+        width_shift_range=0.1,
+        height_shift_range=0.1,
+        shear_range=0.1,
+        zoom_range=0.1,
+        horizontal_flip=True
     )
 
-    model = create_model(input_shape=(100, 100, 3), output_shape=len(np.unique(labels)))
-    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    model = create_model(input_shape=(100, 100, 3), output_shape=len(np.unique(label_encoder.classes_)))
 
     early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, mode='min')
     checkpointer = tf.keras.callbacks.ModelCheckpoint(filepath='face_recognition.h5', verbose=1, save_best_only=True)
