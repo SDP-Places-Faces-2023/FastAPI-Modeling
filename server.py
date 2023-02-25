@@ -103,3 +103,27 @@ async def recognize_image(file: UploadFile = File(...)):
             results.append({"name": name, "confidence": conf})
 
     return {"results": results}
+
+
+
+modelScratch = tf.keras.models.load_model("face_recognition_scratch.h5")
+label_encoder_scratch = joblib.load("label_encoder_scratch.joblib")
+
+@mserver.post("/predictScratch")
+async def predictScratch(file: UploadFile):
+    # Convert UploadFile object to BytesIO object
+    file_bytes = await file.read()
+    file = io.BytesIO(file_bytes)
+
+    # Load image from BytesIO object
+    image = tf.keras.preprocessing.image.load_img(file, target_size=(100, 100))
+    image = tf.keras.preprocessing.image.img_to_array(image)
+    image = tf.expand_dims(image, axis=0)
+
+    # Make prediction using the model
+    result = modelScratch.predict(image)[0]
+    max_prob_idx = np.argmax(result)
+    max_prob = np.max(result)
+    predicted_label = label_encoder_scratch.inverse_transform([max_prob_idx])
+
+    return {"result": predicted_label[0], "confidence": float(max_prob)}
