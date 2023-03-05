@@ -1,5 +1,8 @@
 import io
 import json
+import os
+from typing import List
+
 # import torch
 # from tensorflow import keras
 # import os
@@ -105,3 +108,19 @@ async def recognize_image(file: UploadFile = File(...)):
             results.append({"name": name, "confidence": conf})
 
     return {"results": results}
+
+
+
+@mserver.post("/upload_images/")
+async def upload_images(id: str, images: List[UploadFile] = File(...)):
+    # Create a folder with the ID
+    folder_path = f"./Five_Faces/{id}"
+    os.makedirs(folder_path, exist_ok=True)
+
+    # Save the images in the folder
+    for image in images:
+        file_path = os.path.join(folder_path, image.filename)
+        with open(file_path, "wb") as f:
+            f.write(image.file.read())
+
+    return {"message": "Images uploaded successfully"}
