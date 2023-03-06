@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import shutil
 from typing import List
 
 # import torch
@@ -51,6 +52,7 @@ async def get_body(file: bytes = File(...)):
 model = tf.keras.models.load_model("face_recognition.h5")
 label_encoder = joblib.load("label_encoder.joblib")
 
+
 @mserver.post("/predict")
 async def predict(file: UploadFile):
     # Convert UploadFile object to BytesIO object
@@ -71,7 +73,6 @@ async def predict(file: UploadFile):
     return {"result": predicted_label[0], "confidence": float(max_prob)}
 
 
-
 face_cascade = cv2.CascadeClassifier('cascades/data/haarcascade_frontalface_alt2.xml')
 
 
@@ -88,6 +89,7 @@ async def detect_faces(file: UploadFile = File(...)):
         face_coordinates = faces.tolist()
         print(face_coordinates)
         return face_coordinates[0]
+
 
 @mserver.post("/recognize_faces/")
 async def recognize_image(file: UploadFile = File(...)):
@@ -110,7 +112,6 @@ async def recognize_image(file: UploadFile = File(...)):
     return {"results": results}
 
 
-
 @mserver.post("/upload_images/")
 async def upload_images(id: str, images: List[UploadFile] = File(...)):
     # Create a folder with the ID
@@ -124,3 +125,18 @@ async def upload_images(id: str, images: List[UploadFile] = File(...)):
             f.write(image.file.read())
 
     return {"message": "Images uploaded successfully"}
+
+
+@mserver.post("/delete_images/")
+async def delete_images(id: str):
+    # Build the path to the folder
+    folder_path = f"./Five_Faces/{id}"
+
+    # Check if the folder exists
+    if os.path.exists(folder_path):
+        # If it exists, delete it
+        shutil.rmtree(folder_path)
+        return {"message": f"Folder {id} deleted successfully"}
+    else:
+        # If it doesn't exist, return an error message
+        return {"message": f"Folder {id} does not exist"}
