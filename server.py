@@ -1,3 +1,4 @@
+import base64
 import io
 import json
 import os
@@ -12,6 +13,7 @@ import tensorflow as tf
 import numpy as np
 # import uvicorn
 from fastapi import FastAPI, UploadFile, File
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
@@ -125,6 +127,44 @@ async def upload_images(id: str, images: List[UploadFile] = File(...)):
             f.write(image.file.read())
 
     return {"message": "Images uploaded successfully"}
+
+
+@mserver.get("/has_images/")
+async def has_images(id: str):
+    folder_path = f"./Five_Faces/{id}"
+    if not os.path.exists(folder_path):
+        return {"has_images": False}
+
+    files = os.listdir(folder_path)
+    images = [f for f in files if f.lower().endswith((".png", ".jpg", ".jpeg", ".gif"))]
+    return {"has_images": len(images) > 0}
+
+
+@mserver.get("/get_images/")
+async def get_images(id: str):
+    # Build the path to the folder
+    folder_path = f"./Five_Faces/{id}"
+
+    # Check if the folder exists
+    if not os.path.exists(folder_path):
+        # If it doesn't exist, return an error message
+        return {"message": f"Folder {id} does not exist"}
+
+    # Get a list of all files in the folder
+    files = os.listdir(folder_path)
+
+    # Filter out non-image files
+    images = [f for f in files if f.lower().endswith((".png", ".jpg", ".jpeg", ".gif"))]
+
+    # Build a dictionary of Base64-encoded image strings for each image file
+    encoded_images = {}
+    for image_filename in images:
+        image_path = os.path.join(folder_path, image_filename)
+        with open(image_path, "rb") as f:
+            encoded_image = base64.b64encode(f.read()).decode()
+        encoded_images[image_filename] = encoded_image
+
+    return encoded_images
 
 
 @mserver.post("/delete_images/")
