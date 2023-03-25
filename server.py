@@ -78,27 +78,45 @@ async def predict(file: UploadFile):
 face_cascade = cv2.CascadeClassifier('cascades/data/haarcascade_frontalface_alt2.xml')
 
 
-@mserver.post("/detect_faces/")
-async def detect_faces(file: UploadFile = File(...)):
-    contents = await file.read()
-    pil_image = Image.open(io.BytesIO(contents)).convert("L")
-    image_array = np.array(pil_image, "uint8")
-    faces = face_cascade.detectMultiScale(image_array, scaleFactor=1.5, minNeighbors=5)
-    if len(faces) == 0:
-        print("No Face")
-        return "No Face"
-    else:
-        face_coordinates = faces.tolist()
-        print(face_coordinates)
-        return face_coordinates[0]
+# @mserver.post("/detect_faces/")
+# async def detect_faces(file: UploadFile = File(...)):
+#     contents = await file.read()
+#     pil_image = Image.open(io.BytesIO(contents)).convert("L")
+#     image_array = np.array(pil_image, "uint8")
+#     faces = face_cascade.detectMultiScale(image_array, scaleFactor=1.5, minNeighbors=5)
+#     if len(faces) == 0:
+#         print("No Face")
+#         return "No Face"
+#     else:
+#         face_coordinates = faces.tolist()
+#         return face_coordinates[0]
 
 
-@mserver.post("/recognize_faces/")
-async def recognize_image(file: UploadFile = File(...)):
-    contents = await file.read()
-    nparr = np.fromstring(contents, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+# @mserver.post("/recognize_faces/")
+# async def recognize_image(file: UploadFile = File(...)):
+#     contents = await file.read()
+#     nparr = np.fromstring(contents, np.uint8)
+#     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+#     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+#     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.6, minNeighbors=8)
+#
+#     results = []
+#     for (x, y, w, h) in faces:
+#         roi_gray = gray[y:y + h, x:x + w]
+#         roi_color = img[y:y + h, x:x + w]
+#
+#         id_, conf = recognizer.predict(roi_gray)
+#         if 45 <= conf <= 99:
+#             name = labels[id_]
+#             results.append({"name": name, "confidence": conf})
+#
+#     return {"results": results}
+async def recognize_image(image: Image):
+    # Convert the PIL Image to OpenCV format
+    image_array = np.array(image)
+    img = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.6, minNeighbors=8)
 
     results = []
@@ -114,19 +132,67 @@ async def recognize_image(file: UploadFile = File(...)):
     return {"results": results}
 
 
+@mserver.post("/detect_recognize/")
+async def detect_faces_and_recognize(file: UploadFile = File(...)):
+    contents = await file.read()
+    pil_image = Image.open(io.BytesIO(contents)).convert("L")
+    image_array = np.array(pil_image, "uint8")
+    faces = face_cascade.detectMultiScale(image_array, scaleFactor=1.5, minNeighbors=5)
+
+    if len(faces) == 0:
+        print("No Face")
+        return "No Face"
+    else:
+        face_coordinates = faces.tolist()
+        x, y, w, h = face_coordinates[0]
+
+        # Crop the face from the image
+        cropped_face = pil_image.crop((x, y, x + w, y + h))
+
+        # Recognize the cropped face
+        recognition_results = await recognize_image(cropped_face)
+
+        return {"face_coordinates": face_coordinates[0], "recognition_results": recognition_results}
+
+
+async def crop_face(pil_image):
+    image_array = np.array(pil_image, "uint8")
+    faces = face_cascade.detectMultiScale(image_array, scaleFactor=1.5, minNeighbors=5)
+
+    if len(faces) == 0:
+        print("No Face")
+        return None
+    else:
+        face_coordinates = faces.tolist()
+        x, y, w, h = face_coordinates[0]
+
+        # Crop the face from the image
+        cropped_face = pil_image.crop((x, y, x + w, y + h))
+        return cropped_face
+
+
 @mserver.post("/upload_images/")
 async def upload_images(id: str, images: List[UploadFile] = File(...)):
     # Create a folder with the ID
     folder_path = f"./Five_Faces/{id}"
     os.makedirs(folder_path, exist_ok=True)
 
-    # Save the images in the folder
+    # Save the cropped images in the folder
     for image in images:
-        file_path = os.path.join(folder_path, image.filename)
-        with open(file_path, "wb") as f:
-            f.write(image.file.read())
+        contents = await image.read()
+        pil_image = Image.open(io.BytesIO(contents))
 
-    return {"message": "Images uploaded successfully"}
+        # Crop the face from the image
+        cropped_face = await crop_face(pil_image)
+
+        if cropped_face is not None:
+            # Save the cropped face
+            file_path = os.path.join(folder_path, f"cropped_{image.filename}")
+            cropped_face.save(file_path)
+        else:
+            print(f"No face detected in {image.filename}")
+
+    return {"message": "Images uploaded and cropped successfully"}
 
 
 @mserver.get("/has_images/")
