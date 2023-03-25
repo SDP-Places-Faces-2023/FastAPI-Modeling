@@ -1,29 +1,17 @@
 import base64
 import io
-import json
 import os
 import shutil
 from typing import List
-
-# import torch
-# from tensorflow import keras
-# import os
+from keras_vggface.utils import preprocess_input
 import cv2
 import tensorflow as tf
 import numpy as np
-# import uvicorn
 from fastapi import FastAPI, UploadFile, File
-from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
-
-import model_classifier
-import yolov5s
 import joblib
-# from faceRecMod import create_model
 
-from model_classifier import predict, read_imagefile
-from recongize import recognizer, labels
 
 mserver = FastAPI()
 
@@ -36,47 +24,46 @@ mserver.add_middleware(
 )
 
 
-@mserver.post("/predict/image")
-async def predict_api(file: UploadFile = File(...)):
-    image = read_imagefile(await file.read())
-    prediction = model_classifier.predict(image)
-    return prediction
+# @mserver.post("/predict/image")
+# async def predict_api(file: UploadFile = File(...)):
+#     image = read_imagefile(await file.read())
+#     prediction = model_classifier.predict(image)
+#     return prediction
+#
+
+# @mserver.post("/objectdetection/")
+# async def get_body(file: bytes = File(...)):
+#     input_image = Image.open(io.BytesIO(file)).convert("RGB")
+#     results = yolov5s.model(input_image)
+#     results_json = json.loads(results.pandas().xyxy[0].to_json(orient="records"))
+#     return {"result": results_json}
 
 
-@mserver.post("/objectdetection/")
-async def get_body(file: bytes = File(...)):
-    input_image = Image.open(io.BytesIO(file)).convert("RGB")
-    results = yolov5s.model(input_image)
-    results_json = json.loads(results.pandas().xyxy[0].to_json(orient="records"))
-    return {"result": results_json}
+# model = tf.keras.models.load_model("face_recognition.h5")
+# label_encoder = joblib.load("label_encoder.joblib")
 
 
-model = tf.keras.models.load_model("face_recognition.h5")
-label_encoder = joblib.load("label_encoder.joblib")
-
-
-@mserver.post("/predict")
-async def predict(file: UploadFile):
-    # Convert UploadFile object to BytesIO object
-    file_bytes = await file.read()
-    file = io.BytesIO(file_bytes)
-
-    # Load image from BytesIO object
-    image = tf.keras.preprocessing.image.load_img(file, target_size=(100, 100))
-    image = tf.keras.preprocessing.image.img_to_array(image)
-    image = tf.expand_dims(image, axis=0)
-
-    # Make prediction using the model
-    result = model.predict(image)[0]
-    max_prob_idx = np.argmax(result)
-    max_prob = np.max(result)
-    predicted_label = label_encoder.inverse_transform([max_prob_idx])
-
-    return {"result": predicted_label[0], "confidence": float(max_prob)}
-
-
+# @mserver.post("/predict")
+# async def predict(file: UploadFile):
+#     # Convert UploadFile object to BytesIO object
+#     file_bytes = await file.read()
+#     file = io.BytesIO(file_bytes)
+#
+#     # Load image from BytesIO object
+#     image = tf.keras.preprocessing.image.load_img(file, target_size=(100, 100))
+#     image = tf.keras.preprocessing.image.img_to_array(image)
+#     image = tf.expand_dims(image, axis=0)
+#
+#     # Make prediction using the model
+#     result = model.predict(image)[0]
+#     max_prob_idx = np.argmax(result)
+#     max_prob = np.max(result)
+#     predicted_label = label_encoder.inverse_transform([max_prob_idx])
+#
+#     return {"result": predicted_label[0], "confidence": float(max_prob)}
+#
+#
 face_cascade = cv2.CascadeClassifier('cascades/data/haarcascade_frontalface_alt2.xml')
-
 
 # @mserver.post("/detect_faces/")
 # async def detect_faces(file: UploadFile = File(...)):
@@ -111,31 +98,77 @@ face_cascade = cv2.CascadeClassifier('cascades/data/haarcascade_frontalface_alt2
 #             results.append({"name": name, "confidence": conf})
 #
 #     return {"results": results}
+
+
+model_vgg2 = tf.keras.models.load_model("face_recognition_vgg2.h5")
+label_encoder_vgg2 = joblib.load("label_encoder_vgg2.joblib")
+
+
+# Define prediction endpoint
+# @mserver.post("/predictvgg2")
+# async def predict_face(file: UploadFile = File(...)):
+#     # Read and preprocess input image
+#     img = Image.open(file.file)
+#     img = img.resize((224, 224))
+#     x = tf.keras.preprocessing.image.img_to_array(img)
+#     x = preprocess_input(x)
+#
+#     # Make prediction
+#     pred = model_vgg2.predict(np.array([x]))
+#     pred_label = label_encoder_vgg2.inverse_transform(np.argmax(pred, axis=1))[0]
+#     # confidence = np.max(pred)
+#
+#     # Return prediction result
+#     return {'predicted_face': pred_label}
 async def recognize_image(image: Image):
-    # Convert the PIL Image to OpenCV format
-    image_array = np.array(image)
-    img = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.6, minNeighbors=8)
+    # Resize input image
+    img = image.resize((224, 224))
 
-    results = []
-    for (x, y, w, h) in faces:
-        roi_gray = gray[y:y + h, x:x + w]
-        roi_color = img[y:y + h, x:x + w]
+    # Convert the PIL Image to RGB if it's in grayscale
+    if img.mode != "RGB":
+        img = img.convert("RGB")
 
-        id_, conf = recognizer.predict(roi_gray)
-        if 45 <= conf <= 99:
-            name = labels[id_]
-            results.append({"name": name, "confidence": conf})
+    # Convert the PIL Image to a numpy array and change the channel order to BGR
+    img_array = np.array(img)[:, :, ::-1]
 
-    return {"results": results}
+    # Preprocess input image
+    x = tf.keras.preprocessing.image.img_to_array(img_array)
+    x = preprocess_input(x)
+
+    # Make prediction
+    pred = model_vgg2.predict(np.array([x]))
+    pred_label = label_encoder_vgg2.inverse_transform(np.argmax(pred, axis=1))[0]
+    # confidence = np.max(pred)
+
+    # Return prediction result
+    return {'predicted_face': pred_label}
+
+# async def recognize_image(image: Image):
+#     # Convert the PIL Image to OpenCV format
+#     image_array = np.array(image)
+#     img = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
+#     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+#
+#     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.6, minNeighbors=8)
+#
+#     results = []
+#     for (x, y, w, h) in faces:
+#         roi_gray = gray[y:y + h, x:x + w]
+#         roi_color = img[y:y + h, x:x + w]
+#
+#         id_, conf = recognizer.predict(roi_gray)
+#         if 45 <= conf <= 99:
+#             name = labels[id_]
+#             results.append({"name": name, "confidence": conf})
+#
+#     return {"results": results}
 
 
 @mserver.post("/detect_recognize/")
 async def detect_faces_and_recognize(file: UploadFile = File(...)):
     contents = await file.read()
-    pil_image = Image.open(io.BytesIO(contents)).convert("L")
+    pil_image = Image.open(io.BytesIO(contents))
     image_array = np.array(pil_image, "uint8")
     faces = face_cascade.detectMultiScale(image_array, scaleFactor=1.5, minNeighbors=5)
 
@@ -174,7 +207,7 @@ async def crop_face(pil_image):
 @mserver.post("/upload_images/")
 async def upload_images(id: str, images: List[UploadFile] = File(...)):
     # Create a folder with the ID
-    folder_path = f"./Five_Faces/{id}"
+    folder_path = f"./Employee_Images/{id}"
     os.makedirs(folder_path, exist_ok=True)
 
     # Save the cropped images in the folder
@@ -197,7 +230,7 @@ async def upload_images(id: str, images: List[UploadFile] = File(...)):
 
 @mserver.get("/has_images/")
 async def has_images(id: str):
-    folder_path = f"./Five_Faces/{id}"
+    folder_path = f"./Employee_Images/{id}"
     if not os.path.exists(folder_path):
         return {"has_images": False}
 
@@ -209,7 +242,7 @@ async def has_images(id: str):
 @mserver.get("/get_images/")
 async def get_images(id: str):
     # Build the path to the folder
-    folder_path = f"./Five_Faces/{id}"
+    folder_path = f"./Employee_Images/{id}"
 
     # Check if the folder exists
     if not os.path.exists(folder_path):
@@ -236,7 +269,7 @@ async def get_images(id: str):
 @mserver.post("/delete_images/")
 async def delete_images(id: str):
     # Build the path to the folder
-    folder_path = f"./Five_Faces/{id}"
+    folder_path = f"./Employee_Images/{id}"
 
     # Check if the folder exists
     if os.path.exists(folder_path):
