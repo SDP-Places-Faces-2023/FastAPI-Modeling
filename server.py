@@ -23,13 +23,26 @@ mserver.add_middleware(
     allow_headers=["*"],
 )
 
-face_cascade = cv2.CascadeClassifier("cascades/data/haarcascade_frontalface_alt2.xml")
 
-model_vgg2 = tf.keras.models.load_model("face_recognition_vgg2.h5")
-label_encoder_vgg2 = joblib.load("label_encoder_vgg2.joblib")
+face_cascade = None
+model_vgg2 = None
+label_encoder_vgg2 = None
+
+model_path = "face_recognition_vgg2.h5"
+label_encoder_path = "label_encoder_vgg2.joblib"
+face_cascade_path = "cascades/data/haarcascade_frontalface_alt2.xml"
+
+if os.path.exists(face_cascade_path):
+    face_cascade = cv2.CascadeClassifier(face_cascade_path)
+
+if os.path.exists(model_path) and os.path.exists(label_encoder_path):
+    model_vgg2 = tf.keras.models.load_model(model_path)
+    label_encoder_vgg2 = joblib.load(label_encoder_path)
 
 
 async def recognize_image(image: Image):
+    if model_vgg2 is None or label_encoder_vgg2 is None:
+        return {"error": "Required files not found"}
     # Resize input image
     img = image.resize((224, 224))
 
@@ -68,6 +81,10 @@ async def recognize_image(image: Image):
 
 @mserver.post("/detect_recognize/")
 async def detect_faces_and_recognize(file: UploadFile = File(...)):
+    if face_cascade is None:
+        return {"error": "Required face cascade file not found"}
+    if model_vgg2 is None or label_encoder_vgg2 is None:
+        return {"error": "Required files not found"}
     contents = await file.read()
     pil_image = Image.open(io.BytesIO(contents))
     image_array = np.array(pil_image, "uint8")
@@ -93,6 +110,8 @@ async def detect_faces_and_recognize(file: UploadFile = File(...)):
 
 
 async def crop_face(pil_image):
+    if face_cascade is None:
+        return {"error": "Required face cascade file not found"}
     image_array = np.array(pil_image, "uint8")
     faces = face_cascade.detectMultiScale(image_array, scaleFactor=1.5, minNeighbors=5)
 
