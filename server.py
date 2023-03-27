@@ -2,6 +2,7 @@ import base64
 import io
 import os
 import shutil
+from datetime import datetime
 from typing import List
 from keras_vggface.utils import preprocess_input
 import cv2
@@ -22,7 +23,7 @@ mserver.add_middleware(
     allow_headers=["*"],
 )
 
-face_cascade = cv2.CascadeClassifier('cascades/data/haarcascade_frontalface_alt2.xml')
+face_cascade = cv2.CascadeClassifier("cascades/data/haarcascade_frontalface_alt2.xml")
 
 model_vgg2 = tf.keras.models.load_model("face_recognition_vgg2.h5")
 label_encoder_vgg2 = joblib.load("label_encoder_vgg2.joblib")
@@ -46,10 +47,23 @@ async def recognize_image(image: Image):
     # Make prediction
     pred = model_vgg2.predict(np.array([x]))
     pred_label = label_encoder_vgg2.inverse_transform(np.argmax(pred, axis=1))[0]
-    # confidence = np.max(pred)
+    confidence = np.max(pred)
 
-    # Return prediction result
-    return {'predicted_face': pred_label}
+    if confidence > 0.98:
+        # Return prediction result
+        return {"predicted_face": pred_label}
+    elif confidence > 0.75:
+        today = datetime.now().strftime("%Y-%m-%d")
+        folder_path = os.path.join("unrecognized_faces", today)
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+        # Save unrecognized face to file
+        file_name = f"closest_face_{pred_label}_confidence_{confidence}.jpg"
+        file_path = os.path.join(folder_path, file_name)
+        img.save(file_path)
+
+    return {"error": "Unknown", "closest_face": pred_label, "confidence": float(confidence)}
 
 
 @mserver.post("/detect_recognize/")
@@ -71,8 +85,11 @@ async def detect_faces_and_recognize(file: UploadFile = File(...)):
 
         # Recognize the cropped face
         recognition_results = await recognize_image(cropped_face)
-
-        return {"face_coordinates": face_coordinates[0], "recognition_results": recognition_results}
+        if "Unknown" in recognition_results:
+            return {"face_coordinates": face_coordinates[0], "recognition_results": "Unknown",
+                    "closest_face": recognition_results}
+        else:
+            return {"face_coordinates": face_coordinates[0], "recognition_results": recognition_results}
 
 
 async def crop_face(pil_image):
