@@ -23,7 +23,6 @@ mserver.add_middleware(
     allow_headers=["*"],
 )
 
-
 face_cascade = None
 model_vgg2 = None
 label_encoder_vgg2 = None
@@ -198,7 +197,7 @@ async def delete_images(id: str):
     if os.path.exists(folder_path):
         # If it exists, delete it
         shutil.rmtree(folder_path)
-        return {"message": f"Folder {id} deleted successfully"}
+        return {"success": True, "message": f"Folder {id} deleted successfully"}
     else:
         # If it doesn't exist, return an error message
-        return {"message": f"Folder {id} does not exist"}
+        return {"success": False, "message": f"Folder {id} does not exist"}
