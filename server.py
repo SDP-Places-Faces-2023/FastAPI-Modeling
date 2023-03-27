@@ -4,18 +4,19 @@ import json
 # from tensorflow import keras
 # import os
 import cv2
+import tensorflow_addons as tfa
 import tensorflow as tf
 import numpy as np
 # import uvicorn
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
-
+from keras_vggface.vggface import VGGFace
 import model_classifier
 import yolov5s
 import joblib
 # from faceRecMod import create_model
-
+from keras_vggface.utils import preprocess_input
 from model_classifier import predict, read_imagefile
 from recongize import recognizer, labels
 
@@ -106,24 +107,50 @@ async def recognize_image(file: UploadFile = File(...)):
 
 
 
-modelScratch = tf.keras.models.load_model("face_recognition_scratch.h5")
-label_encoder_scratch = joblib.load("label_encoder_scratch.joblib")
+model_vgg2 = tf.keras.models.load_model("face_recognition_vgg2.h5")
+label_encoder_vgg2 = joblib.load("label_encoder_vgg2.joblib")
 
-@mserver.post("/predictScratch")
-async def predictScratch(file: UploadFile):
-    # Convert UploadFile object to BytesIO object
-    file_bytes = await file.read()
-    file = io.BytesIO(file_bytes)
+# Define prediction endpoint
+@mserver.post("/predictvgg2")
+async def predict_face(file: UploadFile = File(...)):
+    # Read and preprocess input image
+    img = Image.open(file.file)
+    img = img.resize((224, 224))
+    x = tf.keras.preprocessing.image.img_to_array(img)
+    x = preprocess_input(x)
 
-    # Load image from BytesIO object
-    image = tf.keras.preprocessing.image.load_img(file, target_size=(100, 100))
-    image = tf.keras.preprocessing.image.img_to_array(image)
-    image = tf.expand_dims(image, axis=0)
+    # Make prediction
+    pred = model_vgg2.predict(np.array([x]))
+    pred_label = label_encoder_vgg2.inverse_transform(np.argmax(pred, axis=1))[0]
+    # confidence = np.max(pred)
 
-    # Make prediction using the model
-    result = modelScratch.predict(image)[0]
-    max_prob_idx = np.argmax(result)
-    max_prob = np.max(result)
-    predicted_label = label_encoder_scratch.inverse_transform([max_prob_idx])
+    # Return prediction result
+    return {'predicted_face': pred_label}
 
-    return {"result": predicted_label[0], "confidence": float(max_prob)}
+
+
+#
+# from keras_vggface import VGGFace
+# from keras_vggface import utils as vggface_utils
+#
+# # Load model and label encoder
+# modelVGG2 = tf.keras.models.load_model("face_recognition_vgg2.h5")
+# label_encoderVGG2 = joblib.load("label_encoder_vgg2.joblib")
+#
+#
+# # Define prediction endpoint
+# @mserver.post("/predictvgg2")
+# async def predict_face(file: UploadFile = File(...)):
+#     # Read and preprocess input image
+#     img = Image.open(file.file)
+#     img = img.resize((224, 224))
+#     x = tf.keras.preprocessing.image.img_to_array(img)
+#     x = preprocess_input(x)
+#
+#     # Make prediction
+#     pred = modelVGG2.predict(np.array([x]))
+#     pred_label = label_encoderVGG2.inverse_transform(np.argmax(pred, axis=1))[0]
+#     confidence = np.max(pred)
+#
+#     # Return prediction result
+#     return {'predicted_face': pred_label, 'confidence': confidence}
