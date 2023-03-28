@@ -12,6 +12,7 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import joblib
+from mtcnn import MTCNN
 
 mserver = FastAPI()
 
@@ -30,10 +31,8 @@ label_encoder_vgg2 = None
 
 model_path = "face_recognition_vgg2.h5"
 label_encoder_path = "label_encoder_vgg2.joblib"
-face_cascade_path = "cascades/data/haarcascade_frontalface_alt2.xml"
 
-if os.path.exists(face_cascade_path):
-    face_cascade = cv2.CascadeClassifier(face_cascade_path)
+detector = MTCNN()
 
 if os.path.exists(model_path) and os.path.exists(label_encoder_path):
     model_vgg2 = tf.keras.models.load_model(model_path)
@@ -88,14 +87,14 @@ async def detect_faces_and_recognize(file: UploadFile = File(...)):
     contents = await file.read()
     pil_image = Image.open(io.BytesIO(contents))
     image_array = np.array(pil_image, "uint8")
-    faces = face_cascade.detectMultiScale(image_array, scaleFactor=1.5, minNeighbors=5)
+    faces = detector.detect_faces(image_array)
 
     if len(faces) == 0:
         print("No Face")
         return "No Face"
     else:
-        face_coordinates = faces.tolist()
-        x, y, w, h = face_coordinates[0]
+        face_coordinates = faces[0]['box']
+        x, y, w, h = face_coordinates
 
         # Crop the face from the image
         cropped_face = pil_image.crop((x, y, x + w, y + h))
@@ -110,17 +109,16 @@ async def detect_faces_and_recognize(file: UploadFile = File(...)):
 
 
 async def crop_face(pil_image):
-    if face_cascade is None:
-        return {"error": "Required face cascade file not found"}
     image_array = np.array(pil_image, "uint8")
-    faces = face_cascade.detectMultiScale(image_array, scaleFactor=1.5, minNeighbors=5)
+    faces = detector.detect_faces(image_array)
 
     if len(faces) == 0:
         print("No Face")
         return None
     else:
-        face_coordinates = faces.tolist()
-        x, y, w, h = face_coordinates[0]
+        # Get coordinates of first detected face
+        face_coordinates = faces[0]['box']
+        x, y, w, h = face_coordinates
 
         # Crop the face from the image
         cropped_face = pil_image.crop((x, y, x + w, y + h))
