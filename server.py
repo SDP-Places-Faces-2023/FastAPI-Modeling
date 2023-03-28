@@ -201,3 +201,41 @@ async def delete_images(id: str):
     else:
         # If it doesn't exist, return an error message
         return {"success": False, "message": f"Folder {id} does not exist"}
+
+
+@mserver.post("/delete_files/")
+async def delete_files(id: str, filenames: List[str]):
+    # Build the path to the folder
+    folder_path = f"./Employee_Images/{id}"
+
+    # Check if the folder exists
+    if not os.path.exists(folder_path):
+        # If it doesn't exist, return an error message
+        return {"success": False,
+                "message": "Folder {id} does not exist"}
+
+    deleted_files = []
+    not_found_files = []
+
+    for filename in filenames:
+        file_path = os.path.join(folder_path, filename)
+        if os.path.exists(file_path):
+            # If the file exists, delete it
+            os.remove(file_path)
+            deleted_files.append(filename)
+        else:
+            not_found_files.append(filename)
+
+    if not_found_files:
+        return {
+            "success": False,
+            "message": "Some files were not found",
+            "deleted_files": deleted_files,
+            "not_found_files": not_found_files,
+        }
+    else:
+        return {
+            "success": True,
+            "message": "All files deleted successfully",
+            "deleted_files": deleted_files,
+        }
