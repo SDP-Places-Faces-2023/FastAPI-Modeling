@@ -58,7 +58,7 @@ def main():
     checkpointer = tf.keras.callbacks.ModelCheckpoint(filepath='face_recognition_vgg2.h5', verbose=1,
                                                       save_best_only=True)
 
-    history = model.fit_generator(datagen.flow(X_train, y_train, batch_size=32), epochs=1,
+    history = model.fit_generator(datagen.flow(X_train, y_train, batch_size=32), epochs=12,
                                   validation_data=(X_val, y_val), callbacks=[early_stop, checkpointer])
 
     with open("face_recognition_vgg2_history.txt", "w") as f:
