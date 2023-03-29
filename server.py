@@ -13,6 +13,9 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import joblib
+from mtcnn import MTCNN
+
+detector = MTCNN()
 
 mserver = FastAPI()
 
@@ -144,17 +147,16 @@ async def detect_faces_and_recognize(file: UploadFile = File(...)):
 
 
 async def crop_face(pil_image):
-    if face_cascade is None:
-        return {"error": "Required face cascade file not found"}
     image_array = np.array(pil_image, "uint8")
-    faces = face_cascade.detectMultiScale(image_array, scaleFactor=1.5, minNeighbors=5)
+    faces = detector.detect_faces(image_array)
 
     if len(faces) == 0:
         print("No Face")
         return None
     else:
-        face_coordinates = faces.tolist()
-        x, y, w, h = face_coordinates[0]
+        # Get coordinates of first detected face
+        face_coordinates = faces[0]['box']
+        x, y, w, h = face_coordinates
 
         # Crop the face from the image
         cropped_face = pil_image.crop((x, y, x + w, y + h))
