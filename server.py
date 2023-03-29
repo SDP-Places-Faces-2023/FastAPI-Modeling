@@ -2,6 +2,7 @@ import base64
 import io
 import os
 import shutil
+import time
 from datetime import datetime
 from typing import List
 from keras_vggface.utils import preprocess_input
@@ -12,6 +13,7 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import joblib
+from starlette.responses import StreamingResponse, Response
 
 mserver = FastAPI()
 
@@ -37,6 +39,46 @@ if os.path.exists(face_cascade_path):
 if os.path.exists(model_path) and os.path.exists(label_encoder_path):
     model_vgg2 = tf.keras.models.load_model(model_path)
     label_encoder_vgg2 = joblib.load(label_encoder_path)
+
+
+@mserver.get("/training_status")
+def training_status():
+    """
+    Returns the status of the last training job.
+    """
+    if os.path.exists("face_recognition_vgg2.h5"):
+        timestamp = time.ctime(os.path.getmtime("face_recognition_vgg2.h5"))
+        label_encoder = joblib.load("label_encoder_vgg2.joblib")
+
+        # Return the training history and the list of classes
+        with open("face_recognition_vgg2_history.txt", "r") as f:
+            history = f.read()
+        classes = label_encoder.classes_.tolist()
+        return {"status": "Training completed", "timestamp": timestamp, "history": history, "classes": classes}
+    else:
+        return {"status": "No training job found"}
+
+
+#
+@mserver.post("/train_model")
+def train_model():
+    """
+    Trains the face recognition model and returns the training history.
+    """
+    # Import the training code from faceTrainVGG2.py
+    from faceTrainVGG2 import main
+
+    # Train the model
+    main()
+
+    # Load the label encoder
+    label_encoder = joblib.load("label_encoder_vgg2.joblib")
+
+    # Return the training history and the list of classes
+    with open("face_recognition_vgg2_history.txt", "r") as f:
+        history = f.read()
+    classes = label_encoder.classes_.tolist()
+    return {"history": history, "classes": classes}
 
 
 async def recognize_image(image: Image):
