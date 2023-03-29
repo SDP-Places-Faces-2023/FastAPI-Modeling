@@ -43,9 +43,6 @@ if os.path.exists(model_path) and os.path.exists(label_encoder_path):
 
 @mserver.get("/training_status")
 def training_status():
-    """
-    Returns the status of the last training job.
-    """
     if os.path.exists("face_recognition_vgg2.h5"):
         timestamp = time.ctime(os.path.getmtime("face_recognition_vgg2.h5"))
         label_encoder = joblib.load("label_encoder_vgg2.joblib")
@@ -62,9 +59,7 @@ def training_status():
 #
 @mserver.post("/train_model")
 def train_model():
-    """
-    Trains the face recognition model and returns the training history.
-    """
+
     # Import the training code from faceTrainVGG2.py
     from faceTrainVGG2 import main
 
