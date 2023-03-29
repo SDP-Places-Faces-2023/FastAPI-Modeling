@@ -13,7 +13,6 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import joblib
-from starlette.responses import StreamingResponse, Response
 
 mserver = FastAPI()
 
@@ -41,7 +40,7 @@ if os.path.exists(model_path) and os.path.exists(label_encoder_path):
     label_encoder_vgg2 = joblib.load(label_encoder_path)
 
 
-@mserver.get("/training_status")
+@mserver.get("/training_status/")
 def training_status():
     if os.path.exists("face_recognition_vgg2.h5"):
         timestamp = time.ctime(os.path.getmtime("face_recognition_vgg2.h5"))
@@ -57,9 +56,8 @@ def training_status():
 
 
 #
-@mserver.post("/train_model")
+@mserver.post("/train_model/")
 def train_model():
-
     # Import the training code from faceTrainVGG2.py
     from faceTrainVGG2 import main
 
