@@ -276,3 +276,9 @@ async def delete_files(id: str, filenames: List[str]):
             "message": "All files deleted successfully",
             "deleted_files": deleted_files,
         }
+
+
+@mserver.get("/health")
+async def health_check():
+    # Add your custom health checks here
+    return {"status": "ok"}
