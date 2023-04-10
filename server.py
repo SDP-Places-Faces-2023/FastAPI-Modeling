@@ -35,12 +35,19 @@ model_path = "face_recognition_vgg2.h5"
 label_encoder_path = "label_encoder_vgg2.joblib"
 face_cascade_path = "cascades/data/haarcascade_frontalface_alt2.xml"
 
-if os.path.exists(face_cascade_path):
-    face_cascade = cv2.CascadeClassifier(face_cascade_path)
 
-if os.path.exists(model_path) and os.path.exists(label_encoder_path):
-    model_vgg2 = tf.keras.models.load_model(model_path)
-    label_encoder_vgg2 = joblib.load(label_encoder_path)
+def load_resources():
+    global face_cascade, model_vgg2, label_encoder_vgg2
+
+    if os.path.exists(face_cascade_path):
+        face_cascade = cv2.CascadeClassifier(face_cascade_path)
+
+    if os.path.exists(model_path) and os.path.exists(label_encoder_path):
+        model_vgg2 = tf.keras.models.load_model(model_path)
+        label_encoder_vgg2 = joblib.load(label_encoder_path)
+
+
+load_resources()
 
 
 @mserver.get("/training_status/")
@@ -67,7 +74,7 @@ def train_model():
 
     # Train the model
     main()
-
+    load_resources()
     # Load the label encoder
     label_encoder = joblib.load("label_encoder_vgg2.joblib")
 
