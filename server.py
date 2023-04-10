@@ -53,9 +53,10 @@ def training_status():
         with open("face_recognition_vgg2_history.txt", "r") as f:
             history = f.read()
         classes = label_encoder.classes_.tolist()
-        return {"status": "Training completed", "timestamp": timestamp, "history": history, "classes": classes}
+        return {"status": "Training completed", "timestamp": timestamp, "history": history, "classes": classes,
+                "success": True}
     else:
-        return {"status": "No training job found"}
+        return {"status": "No training job found", "success": False}
 
 
 #
