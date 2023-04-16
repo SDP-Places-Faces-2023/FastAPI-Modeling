@@ -243,6 +243,21 @@ async def get_unrecognized_folders():
     return folders
 
 
+@mserver.get("/delete_unrecognized_images/")
+async def delete_images(date: str):
+    # Build the path to the folder
+    folder_path = f"./unrecognized_faces/{date}"
+
+    # Check if the folder exists
+    if os.path.exists(folder_path):
+        # If it exists, delete it
+        shutil.rmtree(folder_path)
+        return {"success": True, "message": f"Folder {date} deleted successfully"}
+    else:
+        # If it doesn't exist, return an error message
+        return {"success": False, "message": f"Folder {date} does not exist"}
+
+
 @mserver.get("/get_unrecognized_faces/")
 async def get_unrecognized_faces(date: str):
     folder_path = f"./unrecognized_faces/{date}"
