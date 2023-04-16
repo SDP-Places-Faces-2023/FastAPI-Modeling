@@ -233,6 +233,37 @@ async def get_images(id: str):
     return encoded_images
 
 
+@mserver.get("/get_unrecognized_folders/")
+async def get_unrecognized_folders():
+    base_path = "./unrecognized_faces/"
+    if not os.path.exists(base_path):
+        return {"message": "No folders found"}
+
+    folders = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
+    return folders
+
+
+@mserver.get("/get_unrecognized_faces/")
+async def get_unrecognized_faces(date: str):
+    folder_path = f"./unrecognized_faces/{date}"
+    if not os.path.exists(folder_path):
+        # If it doesn't exist, return an error message
+        return {"message": f"Folder {date} does not exist"}
+
+    files = os.listdir(folder_path)
+
+    images = [f for f in files if f.lower().endswith((".png", ".jpg", ".jpeg", ".gif"))]
+
+    encoded_images = {}
+    for image_filename in images:
+        image_path = os.path.join(folder_path, image_filename)
+        with open(image_path, "rb") as f:
+            encoded_image = base64.b64encode(f.read()).decode()
+        encoded_images[image_filename] = encoded_image
+
+    return encoded_images
+
+
 @mserver.post("/delete_images/")
 async def delete_images(id: str):
     # Build the path to the folder
